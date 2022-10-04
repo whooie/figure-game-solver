@@ -1,0 +1,22 @@
+[[bin]]
+path = "src/main.rs"
+name = "figure-solve"
+
+[package]
+name = "figure-game-solver"
+version = "0.1.0"
+authors = [ "whooie <wcwhuie@gmail.com>",]
+edition = "2021"
+description = "A simple solver for the daily puzzle game https://figure.game using a genetic algorithm"
+
+[dependencies]
+itertools = "0.10.5"
+rand = "0.8.5"
+
+[lib]
+path = "lib/lib.rs"
+name = "figure"
+
+[profile.release]
+lto = true
+panic = "abort"
