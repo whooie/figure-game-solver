@@ -383,7 +383,7 @@ pub struct Config {
 impl Config {
     pub fn from_file(infile: PathBuf) -> IOResult<Self> {
         let table: toml::Value
-            = fs::read_to_string(infile.clone())
+            = fs::read_to_string(infile)
             .map_err(|_| IOError::ReadError)?
             .parse::<toml::Value>()
             .map_err(|_| IOError::ParseError)?;
