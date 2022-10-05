@@ -69,7 +69,7 @@ impl TryFrom<f64> for Probability {
     type Error = EvolveError;
 
     fn try_from(p: f64) -> EvolveResult<Probability> {
-        return if p >= 0.0 && p <= 1.0 {
+        return if (0.0..=1.0).contains(&p) {
             Ok(Probability { p })
         } else {
             Err(EvolveError::BadProbability)
@@ -81,7 +81,7 @@ impl TryFrom<f32> for Probability {
     type Error = EvolveError;
 
     fn try_from(p: f32) -> EvolveResult<Probability> {
-        return if p >= 0.0 && p <= 1.0 {
+        return if (0.0..=1.0).contains(&p) {
             Ok(Probability { p: p as f64 })
         } else {
             Err(EvolveError::BadProbability)
@@ -176,7 +176,7 @@ pub trait Population
         loop {
             self.evolve_rng(mutate, &mut rng)?;
             k += 1;
-            if cond(&self) { break; }
+            if cond(self) { break; }
         }
         return Ok(k);
     }

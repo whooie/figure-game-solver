@@ -83,7 +83,7 @@ impl<'a> Strategy<'a> {
     pub fn eval_score(&mut self) -> SolveResult<()> {
         if self.score.is_none() {
             let mut board = self.board.clone();
-            board.do_move_multi(self.moves.iter().map(|m| *m))
+            board.do_move_multi(self.moves.iter().copied())
                 .map_err(|_| SolveError::InvalidStrategy)?;
             self.score = Some(-(board.non_empty() as isize));
         }
@@ -103,7 +103,7 @@ impl<'a> Strategy<'a> {
     /// Return a new `Board` in its final state after applying the strategy.
     pub fn final_board(&self) -> SolveResult<Board> {
         let mut board = self.board.clone();
-        board.do_move_multi(self.moves.iter().map(|m| *m))
+        board.do_move_multi(self.moves.iter().copied())
             .map_err(|_| SolveError::InvalidStrategy)?;
         return Ok(board);
     }
