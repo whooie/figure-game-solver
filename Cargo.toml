@@ -10,8 +10,8 @@ edition = "2021"
 description = "A simple solver for the daily puzzle game https://figure.game using a genetic algorithm"
 
 [dependencies]
-itertools = "0.10.5"
 rand = "0.8.5"
+toml = "0.5.9"
 
 [lib]
 path = "lib/lib.rs"

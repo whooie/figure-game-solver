@@ -1,8 +1,12 @@
 #![allow(dead_code, non_snake_case, non_upper_case_globals)]
 #![allow(clippy::needless_return)]
 
+use std::path::PathBuf;
 use figure::{
-    game::Board,
+    game::{
+        Board,
+        Config,
+    },
     evolve::{
         Population,
         Probability,
@@ -13,22 +17,16 @@ use figure::{
     },
 };
 
-const BOARD: [[u8; 5]; 5] = [
-    [ 2, 2, 3, 1, 4 ],
-    [ 4, 2, 1, 3, 4 ],
-    [ 2, 3, 2, 4, 2 ],
-    [ 2, 4, 1, 1, 4 ],
-    [ 1, 4, 4, 4, 1 ],
-];
-const MOVES: usize = 10;
 const POPULATION_SIZE: usize = 500;
 const MUTATE: f64 = 0.8;
 
 fn main() {
-    let board = Board::from(BOARD);
+    let config = Config::from_file(PathBuf::from("config.toml"))
+        .expect("problem reading config file");
+    let board = Board::from_iter_shape(config.blocks.clone(), (5, 5));
     println!("{board}");
 
-    let gen = || Strategy::new_random(&board, MOVES);
+    let gen = || Strategy::new_random(&board, config.n_moves);
     let mut solver = Solver::init(POPULATION_SIZE, gen);
     let mutate: Probability = MUTATE.try_into()
         .expect("probability must be between 0 and 1");

@@ -3,11 +3,14 @@
 
 use std::{
     fmt,
+    fs,
+    path::PathBuf,
 };
 use rand::{
     prelude as rnd,
     Rng,
 };
+use toml;
 use crate::{
     mkerr,
 };
@@ -19,6 +22,16 @@ mkerr!(
     }
 );
 pub type GameResult<T> = Result<T, GameError>;
+
+mkerr!(
+    IOError : {
+        ReadError => "couldn't read config file",
+        ParseError => "couldn't parse config file",
+        KeyNotFound => "missing expected key(s)",
+        TypeError => "couldn't coerce type",
+    }
+);
+pub type IOResult<T> = Result<T, IOError>;
 
 /// Block type, including the case where one has been removed.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -358,6 +371,39 @@ impl fmt::Display for Board {
             }
         }
         return write!(f, "{}", outstr.trim());
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Config {
+    pub blocks: Vec<u8>,
+    pub n_moves: usize,
+}
+
+impl Config {
+    pub fn from_file(infile: PathBuf) -> IOResult<Self> {
+        let table: toml::Value
+            = fs::read_to_string(infile.clone())
+            .map_err(|_| IOError::ReadError)?
+            .parse::<toml::Value>()
+            .map_err(|_| IOError::ParseError)?;
+        let blocks: Vec<u8>;
+        if let Some(X) = table.get("blocks") {
+            let _blocks_: Vec<i64>
+                = X.clone().try_into().map_err(|_| IOError::TypeError)?;
+            blocks = _blocks_.into_iter().map(|b| b as u8).collect();
+        } else {
+            return Err(IOError::KeyNotFound);
+        }
+        let n_moves: usize;
+        if let Some(X) = table.get("n_moves") {
+            let _n_moves_: i64
+                = X.clone().try_into().map_err(|_| IOError::TypeError)?;
+            n_moves = _n_moves_ as usize;
+        } else {
+            return Err(IOError::KeyNotFound);
+        }
+        return Ok(Config { blocks, n_moves });
     }
 }
 
