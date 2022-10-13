@@ -27,6 +27,7 @@ mkerr!(
     IOError : {
         ReadError => "couldn't read config file",
         ParseError => "couldn't parse config file",
+        TableNotFound => "missing expected table",
         KeyNotFound => "missing expected key(s)",
         TypeError => "couldn't coerce type",
     }
@@ -386,7 +387,10 @@ impl Config {
             = fs::read_to_string(infile)
             .map_err(|_| IOError::ReadError)?
             .parse::<toml::Value>()
-            .map_err(|_| IOError::ParseError)?;
+            .map_err(|_| IOError::ParseError)?
+            .get("game")
+            .ok_or(IOError::TableNotFound)?
+            .clone();
         let blocks: Vec<u8>;
         if let Some(X) = table.get("blocks") {
             let _blocks_: Vec<i64>

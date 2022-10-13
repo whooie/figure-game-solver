@@ -7,11 +7,14 @@ use std::{
         TryFrom,
         TryInto,
     },
+    fs,
+    path::PathBuf,
 };
 use rand::{
     prelude as rnd,
     Rng,
 };
+use toml;
 use crate::{
     mkerr,
 };
@@ -22,6 +25,18 @@ mkerr!(
     }
 );
 pub type EvolveResult<T> = Result<T, EvolveError>;
+
+mkerr!(
+    IOError : {
+        ReadError => "couldn't read config file",
+        ParseError => "couldn't parse config file",
+        TableNotFound => "missing expected table",
+        KeyNotFound => "missing expected key(s)",
+        TypeError => "couldn't coerce type",
+        BadProbability => "probability must be between 0 and 1",
+    }
+);
+pub type IOResult<T> = Result<T, IOError>;
 
 /// Basic way to filter for floating point values in the range `[0.0, 1.0]`.
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -184,5 +199,41 @@ pub trait Population
     /// Return a reference to the individual scoring the highest in fitness, if
     /// one can be determined.
     fn get_most_fit(&self) -> Option<&Self::Individual>;
+}
+
+#[derive(Clone, Debug)]
+pub struct Config {
+    pub n_pop: usize,
+    pub mutate: Probability,
+}
+
+impl Config {
+    pub fn from_file(infile: PathBuf) -> IOResult<Self> {
+        let table: toml::Value
+            = fs::read_to_string(infile)
+            .map_err(|_| IOError::ReadError)?
+            .parse::<toml::Value>()
+            .map_err(|_| IOError::ParseError)?
+            .get("evolve")
+            .ok_or(IOError::TableNotFound)?
+            .clone();
+        let n_pop: usize;
+        if let Some(X) = table.get("n_pop") {
+            let _n_pop_: i64
+                = X.clone().try_into().map_err(|_| IOError::TypeError)?;
+            n_pop = _n_pop_ as usize;
+        } else {
+            return Err(IOError::KeyNotFound);
+        }
+        let mutate: Probability;
+        if let Some(X) = table.get("mutate") {
+            let _mutate_: f64
+                = X.clone().try_into().map_err(|_| IOError::TypeError)?;
+            mutate = _mutate_.try_into().map_err(|_| IOError::BadProbability)?;
+        } else {
+            return Err(IOError::KeyNotFound);
+        }
+        return Ok(Config { n_pop, mutate });
+    }
 }
 
