@@ -15,27 +15,30 @@ use rand::{
     Rng,
 };
 use toml;
-use crate::{
-    mkerr,
-};
+use thiserror::Error;
 
-mkerr!(
-    EvolveError : {
-        BadProbability => "probability must be between 0 and 1",
-    }
-);
+#[derive(Error, Debug)]
+pub enum EvolveError {
+    #[error("probability must be between 0 and 1")]
+    BadProbability,
+}
 pub type EvolveResult<T> = Result<T, EvolveError>;
 
-mkerr!(
-    IOError : {
-        ReadError => "couldn't read config file",
-        ParseError => "couldn't parse config file",
-        TableNotFound => "missing expected table",
-        KeyNotFound => "missing expected key(s)",
-        TypeError => "couldn't coerce type",
-        BadProbability => "probability must be between 0 and 1",
-    }
-);
+#[derive(Error, Debug)]
+pub enum IOError {
+    #[error("couldn't read config file {0:?}")]
+    ReadError(PathBuf),
+    #[error("couldn't parse config file {0:?}")]
+    ParseError(PathBuf),
+    #[error("missing expected table {0}")]
+    TableNotFound(String),
+    #[error("missing expected key {0}")]
+    KeyNotFound(String),
+    #[error("couldn't coerce type to {0}")]
+    TypeError(String),
+    #[error("probability must be between 0 and 1")]
+    BadProbability,
+}
 pub type IOResult<T> = Result<T, IOError>;
 
 /// Basic way to filter for floating point values in the range `[0.0, 1.0]`.
@@ -210,28 +213,31 @@ pub struct Config {
 impl Config {
     pub fn from_file(infile: PathBuf) -> IOResult<Self> {
         let table: toml::Value
-            = fs::read_to_string(infile)
-            .map_err(|_| IOError::ReadError)?
+            = fs::read_to_string(infile.clone())
+            .map_err(|_| IOError::ReadError(infile.clone()))?
             .parse::<toml::Value>()
-            .map_err(|_| IOError::ParseError)?
+            .map_err(|_| IOError::ParseError(infile.clone()))?
             .get("evolve")
-            .ok_or(IOError::TableNotFound)?
+            .ok_or(IOError::TableNotFound("evolve".to_string()))?
             .clone();
         let n_pop: usize;
         if let Some(X) = table.get("n_pop") {
             let _n_pop_: i64
-                = X.clone().try_into().map_err(|_| IOError::TypeError)?;
+                = X.clone().try_into()
+                .map_err(|_| IOError::TypeError("i64".to_string()))?;
             n_pop = _n_pop_ as usize;
         } else {
-            return Err(IOError::KeyNotFound);
+            return Err(IOError::KeyNotFound("n_pop".to_string()));
         }
         let mutate: Probability;
         if let Some(X) = table.get("mutate") {
             let _mutate_: f64
-                = X.clone().try_into().map_err(|_| IOError::TypeError)?;
-            mutate = _mutate_.try_into().map_err(|_| IOError::BadProbability)?;
+                = X.clone().try_into()
+                .map_err(|_| IOError::TypeError("f64".to_string()))?;
+            mutate = _mutate_.try_into()
+                .map_err(|_| IOError::BadProbability)?;
         } else {
-            return Err(IOError::KeyNotFound);
+            return Err(IOError::KeyNotFound("mutate".to_string()));
         }
         return Ok(Config { n_pop, mutate });
     }

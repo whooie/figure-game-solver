@@ -12,6 +12,8 @@ description = "A simple solver for the daily puzzle game https://figure.game usi
 [dependencies]
 rand = "0.8.5"
 toml = "0.5.9"
+thiserror = "1.0.37"
+anyhow = "1.0.65"
 
 [lib]
 path = "lib/lib.rs"

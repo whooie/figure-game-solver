@@ -7,8 +7,8 @@ use rand::{
     prelude as rnd,
     Rng,
 };
+use thiserror::Error;
 use crate::{
-    mkerr,
     game::Board,
     evolve::{
         Probability,
@@ -18,13 +18,15 @@ use crate::{
     },
 };
 
-mkerr!(
-    SolveError : {
-        InvalidStrategy => "strategy couldn't be applied to its board",
-        UnequalBoards => "strategies must be for the same board",
-        BadProbability => "probability must be between 0 and 1",
-    }
-);
+#[derive(Error, Debug)]
+pub enum SolveError {
+    #[error("strategy couldn't be applied to its board")]
+    InvalidStrategy,
+    #[error("strategies must be for the same board")]
+    UnequalBoards,
+    #[error("probability must be between 0 and 1")]
+    BadProbability,
+}
 pub type SolveResult<T> = Result<T, SolveError>;
 
 impl Score for isize { }

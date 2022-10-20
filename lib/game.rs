@@ -11,27 +11,30 @@ use rand::{
     Rng,
 };
 use toml;
-use crate::{
-    mkerr,
-};
+use thiserror::Error;
 
-mkerr!(
-    GameError : {
-        OffBoard => "location is off the board",
-        OffBoardMulti => "encountered off-board location",
-    }
-);
+#[derive(Error, Debug)]
+pub enum GameError {
+    #[error("location ({0}, {1}) is off the board")]
+    OffBoard(usize, usize),
+    #[error("encountered at least one off-board location")]
+    OffBoardMulti,
+}
 pub type GameResult<T> = Result<T, GameError>;
 
-mkerr!(
-    IOError : {
-        ReadError => "couldn't read config file",
-        ParseError => "couldn't parse config file",
-        TableNotFound => "missing expected table",
-        KeyNotFound => "missing expected key(s)",
-        TypeError => "couldn't coerce type",
-    }
-);
+#[derive(Error, Debug)]
+pub enum IOError {
+    #[error("couldn't read config file {0:?}")]
+    ReadError(PathBuf),
+    #[error("couldn't parse config file {0:?}")]
+    ParseError(PathBuf),
+    #[error("missing expected table {0}")]
+    TableNotFound(String),
+    #[error("missing expected key {0}")]
+    KeyNotFound(String),
+    #[error("couldn't coerce type to {0}")]
+    TypeError(String),
+}
 pub type IOResult<T> = Result<T, IOError>;
 
 /// Block type, including the case where one has been removed.
@@ -132,7 +135,7 @@ impl Board {
     {
         return self.get_mut(idx.0, idx.1)
             .map(|b| { *b = block; })
-            .ok_or(GameError::OffBoard);
+            .ok_or(GameError::OffBoard(idx.0, idx.1));
     }
 
     /// Set block types at multiple indices, overwriting the previous values.
@@ -227,7 +230,8 @@ impl Board {
     pub fn get_group(&self, row: usize, col: usize)
         -> GameResult<Vec<(usize, usize)>>
     {
-        let target: &Block = self.get(row, col).ok_or(GameError::OffBoard)?;
+        let target: &Block
+            = self.get(row, col).ok_or(GameError::OffBoard(row, col))?;
         let mut idx: Vec<(usize, usize)> = vec![(row, col)];
         let mut checked: Vec<(usize, usize)> = vec![(row, col)];
         let mut frontier: Vec<((usize, usize), &Block)>
@@ -384,28 +388,30 @@ pub struct Config {
 impl Config {
     pub fn from_file(infile: PathBuf) -> IOResult<Self> {
         let table: toml::Value
-            = fs::read_to_string(infile)
-            .map_err(|_| IOError::ReadError)?
+            = fs::read_to_string(infile.clone())
+            .map_err(|_| IOError::ReadError(infile.clone()))?
             .parse::<toml::Value>()
-            .map_err(|_| IOError::ParseError)?
+            .map_err(|_| IOError::ParseError(infile.clone()))?
             .get("game")
-            .ok_or(IOError::TableNotFound)?
+            .ok_or(IOError::TableNotFound("game".to_string()))?
             .clone();
         let blocks: Vec<u8>;
         if let Some(X) = table.get("blocks") {
             let _blocks_: Vec<i64>
-                = X.clone().try_into().map_err(|_| IOError::TypeError)?;
+                = X.clone().try_into()
+                .map_err(|_| IOError::TypeError("Vec<i64>".to_string()))?;
             blocks = _blocks_.into_iter().map(|b| b as u8).collect();
         } else {
-            return Err(IOError::KeyNotFound);
+            return Err(IOError::KeyNotFound("blocks".to_string()));
         }
         let n_moves: usize;
         if let Some(X) = table.get("n_moves") {
             let _n_moves_: i64
-                = X.clone().try_into().map_err(|_| IOError::TypeError)?;
+                = X.clone().try_into()
+                .map_err(|_| IOError::TypeError("i64".to_string()))?;
             n_moves = _n_moves_ as usize;
         } else {
-            return Err(IOError::KeyNotFound);
+            return Err(IOError::KeyNotFound("n_moves".to_string()));
         }
         return Ok(Config { blocks, n_moves });
     }

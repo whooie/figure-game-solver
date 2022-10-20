@@ -2,6 +2,7 @@
 #![allow(clippy::needless_return)]
 
 use std::path::PathBuf;
+use anyhow::Result;
 use figure::{
     game::{
         self,
@@ -17,11 +18,9 @@ use figure::{
     },
 };
 
-fn main() {
-    let game_config = game::Config::from_file(PathBuf::from("config.toml"))
-        .expect("problem reading game config");
-    let evolve_config = evolve::Config::from_file(PathBuf::from("config.toml"))
-        .expect("problem reading evolve config");
+fn main() -> Result<()> {
+    let game_config = game::Config::from_file(PathBuf::from("config.toml"))?;
+    let evolve_config = evolve::Config::from_file(PathBuf::from("config.toml"))?;
     let board = Board::from_iter_shape(game_config.blocks.clone(), (5, 5));
     println!("{board}");
 
@@ -30,8 +29,7 @@ fn main() {
     let stop = |solver: &Solver| {
         solver.get_strategies().iter().any(|s| s.get_score().unwrap() == 0)
     };
-    let k: usize = solver.evolve_until(evolve_config.mutate, stop)
-        .expect("failed to evolve population");
+    let k: usize = solver.evolve_until(evolve_config.mutate, stop)?;
 
     println!("");
     println!("population size: {}", evolve_config.n_pop);
@@ -43,4 +41,5 @@ fn main() {
         strategy,
         strategy.final_board().unwrap(),
     );
+    return Ok(());
 }
